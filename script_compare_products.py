@@ -2,11 +2,16 @@ from pandas_ods_reader import read_ods
 import numpy as np
 import re
 import csv
+from pyexcel_ods import save_data
+from collections import OrderedDict
+import sys
 
 itens_pedido = []
 vocab = []
 array_of_sentences = []
 auxStr = ''
+pedido = []
+orcamento = []
 
 def extraction_word(sentence):
     ignorar = [',', 'e','com', 'de', 'para', 'com']
@@ -23,7 +28,9 @@ def tokenize(sentences):
     return palavras
 
 def generate_bow(allsentences):
-    global itens_pedido, vocab    
+    global itens_pedido, vocab
+    itens_pedido =[]
+    vocab = []
     vocab = tokenize(allsentences)
     for sentence in allsentences:
         words = extraction_word(sentence)
@@ -97,29 +104,61 @@ def generate_comparison(items_pedido, items_orcamento):
                 aux = aux + str(i+1) +' ,' + items_pedido[i]+', , , , \n'
     return aux
 
-path = "./pedido.ods"
-path2 = "./orcamento.ods"
-pedido = read_ods(path, 1, columns=["Item", "Descrição", "quantidade"])
-orcamento = read_ods(path2, 1, columns=["Item", "Descrição", "quantidade"])
+def splitString_to_list(varStr):
+    varStr = varStr.splitlines()
+    listData = []
+    for line in varStr:
+        aux = []
+        auxStr = line.split(',')
+        for item in auxStr:
+            aux.append(item)
+        listData.append(aux)
+    return listData
 
-print('****** PEDIDO ******')
-print (pedido)
-print('****** ORÇAMENTO ******')
-print (orcamento)
 
 
-for i in range(len(pedido['Descrição'])):
-    array_of_sentences.append(pedido['Descrição'][i])
+def generate_odsFile(listOrcamentos):
+    data = OrderedDict()
+    for item in range(len(listOrcamentos)):
+        data.update({"Orçamento "+str(item+1): listOrcamentos[item]})
+    save_data("resultado.ods", data)
 
-generate_bow(array_of_sentences)
 
-print ( ' --------------------------------- ')
-result = generate_comparison(array_of_sentences, orcamento['Descrição'])
+def main(inputPedido, inputOrcamentos):
+    global pedido, orcamento
+    path = inputPedido
+    auxResults = []
 
-print(result)
-#print(auxStr)
+    print ('********************** -------------------------------------- ***********************')
+    print ('tamanho orçamento: ' + str(len(inputOrcamentos)))
+    pedido = read_ods(path, 1, columns=["Item", "Descrição", "quantidade"])
+    for i in range(len(pedido['Descrição'])):
+        array_of_sentences.append(pedido['Descrição'][i])
+    generate_bow(array_of_sentences)
+    for item in inputOrcamentos:
+        orcamento = read_ods(item, 1, columns=["Item", "Descrição", "quantidade"])
+        result = generate_comparison(array_of_sentences, orcamento['Descrição'])
+        print(result)
+        auxResults.append((result))
 
-file1 = open("test.csv","w") 
-file1.writelines(result)
-file1.close() 
+    auxList = []
+    print (auxResults)
+    for item in auxResults:
+        auxList.append(splitString_to_list(item))
+    print ('*--***********************************')
+    print ('AUX LIST')
+    print(auxList)
+    generate_odsFile(auxList)
 
+if (len(sys.argv)==1):
+    print('Favor inserir nome do arquivo de pedido e nomes dos arquivos de orçamento.')
+elif (len(sys.argv)==2):
+    print('Favor inserir nome dos arquivos de orçamento')
+elif (len(sys.argv)>=3):
+    listOrcamentos = [ sys.argv[item] for item in range(len(sys.argv)) if item > 1 ]
+    main(sys.argv[1], listOrcamentos)
+    print(listOrcamentos)
+
+print(len(sys.argv))
+
+#generate_odsFile([1,2,3,5])
