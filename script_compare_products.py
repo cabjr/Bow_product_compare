@@ -5,6 +5,7 @@ import csv
 from pyexcel_ods import save_data
 from collections import OrderedDict
 import sys
+import unicodedata
 
 itens_pedido = []
 vocab = []
@@ -13,10 +14,16 @@ auxStr = ''
 pedido = []
 orcamento = []
 
+def remove_accents(word):
+    replaces = [('é','e'), ('ç','c'), ('ó','o'), ('ê', 'e'),('ã', 'a'),('.',''),(',','')]
+    for a,b in replaces:
+        word = word.replace(a,b)
+    return word
+
 def extraction_word(sentence):
-    ignorar = [',', 'e','com', 'de', 'para', 'com']
+    ignorar = [',', 'e','com', 'de', 'para', 'com', '.']
     palavras = re.sub("[^\w]", " ",  sentence).split()
-    texto = [w.lower() for w in palavras if w not in ignorar]
+    texto = [ remove_accents(w.lower()) for w in palavras if w not in ignorar]
     return texto
 
 def tokenize(sentences):
@@ -66,15 +73,10 @@ def count_words(sent1, sent2):
 def test_sentence(descricao):
     global array_of_sentences, auxStr
     aux = generate_vector(descricao)
-    #print(aux)
     listPossible = []
     for j in itens_pedido:
-        #listPossible.append( (1 - np.mean(aux!=j)) * 100)
         listPossible.append( count_words(j, aux) * 100)
-    #print(len(listPossible))
-    #print(listPossible)
     auxStr = auxStr + descricao + ', ' + str(max(listPossible)) + ', ' + str(listPossible.index(max(listPossible))) + ', ' + array_of_sentences[listPossible.index(max(listPossible))] + '\n'
-    #print (descricao + ' - ' + str(max(listPossible)) + ' - ' + str(listPossible.index(max(listPossible))) + ' - ' + array_of_sentences[listPossible.index(max(listPossible))])
     return listPossible.index(max(listPossible)), max(listPossible)
 
 def check_items(listOfItems):
@@ -89,15 +91,13 @@ def check_items(listOfItems):
 def generate_comparison(items_pedido, items_orcamento):
     aux = ''
     itens = check_items(items_orcamento)
-    print('Itens pedido: ' + str(items_pedido))
-    print('Itens Orçamento: ' + str(items_orcamento))
     aux = 'Item, Descrição, quantidade, Descrição Item orçamento, quantidade item orçamento, probabilidade acerto \n'
     for i in range(0,len(items_pedido)):
         for j in range(0,len(itens)):
             if (i == itens[j][1]):
                 vlr = 0
                 if (pedido['quantidade'][i] == orcamento['quantidade'][itens[j][3]]):
-                    vlr = 50
+                    vlr = 40
                 aux = aux + str(i+1)+ ',' + items_pedido[i] + ','+ str(pedido['quantidade'][i]) +' , ' + itens[j][0] + ', '+ str(orcamento['quantidade'][itens[j][3]]) +' , ' + str(itens[j][2]+vlr) + ' %\n'
                 break
             elif j == len(itens)-1:
@@ -115,8 +115,6 @@ def splitString_to_list(varStr):
         listData.append(aux)
     return listData
 
-
-
 def generate_odsFile(listOrcamentos):
     data = OrderedDict()
     for item in range(len(listOrcamentos)):
@@ -128,9 +126,6 @@ def main(inputPedido, inputOrcamentos):
     global pedido, orcamento
     path = inputPedido
     auxResults = []
-
-    print ('********************** -------------------------------------- ***********************')
-    print ('tamanho orçamento: ' + str(len(inputOrcamentos)))
     pedido = read_ods(path, 1, columns=["Item", "Descrição", "quantidade"])
     for i in range(len(pedido['Descrição'])):
         array_of_sentences.append(pedido['Descrição'][i])
@@ -145,9 +140,6 @@ def main(inputPedido, inputOrcamentos):
     print (auxResults)
     for item in auxResults:
         auxList.append(splitString_to_list(item))
-    print ('*--***********************************')
-    print ('AUX LIST')
-    print(auxList)
     generate_odsFile(auxList)
 
 if (len(sys.argv)==1):
@@ -157,8 +149,5 @@ elif (len(sys.argv)==2):
 elif (len(sys.argv)>=3):
     listOrcamentos = [ sys.argv[item] for item in range(len(sys.argv)) if item > 1 ]
     main(sys.argv[1], listOrcamentos)
-    print(listOrcamentos)
-
-print(len(sys.argv))
-
-#generate_odsFile([1,2,3,5])
+    print('Arquivo resultado.ods gerado com sucesso.')
+    print(vocab)
