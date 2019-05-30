@@ -15,7 +15,7 @@ pedido = []
 orcamento = []
 
 def remove_accents(word):
-    replaces = [('é','e'), ('ç','c'), ('ó','o'), ('ê', 'e'),('ã', 'a'),('.',''),(',','')]
+    replaces = [('é','e'), ('ç','c'), ('ó','o'), ('ê', 'e'),('ã', 'a'),('.',''),(',',''),('â','a'),('á','a'),(',',' ')]
     for a,b in replaces:
         word = word.replace(a,b)
     return word
@@ -53,7 +53,7 @@ def generate_vector(descricao):
     bag_vector = np.zeros(len(vocab))
     for w in words:
         for i,word in enumerate(vocab):
-            if word == w: 
+            if word == w or (len(word) == 5 and len(w) == 5 and word[0:4] == w[0:4]): 
                 bag_vector[i] += 1
     return bag_vector
 
@@ -98,10 +98,13 @@ def generate_comparison(items_pedido, items_orcamento):
                 vlr = 0
                 if (pedido['quantidade'][i] == orcamento['quantidade'][itens[j][3]]):
                     vlr = 40
-                aux = aux + str(i+1)+ ',' + items_pedido[i] + ','+ str(pedido['quantidade'][i]) +' , ' + itens[j][0] + ', '+ str(orcamento['quantidade'][itens[j][3]]) +' , ' + str(itens[j][2]+vlr) + ' %\n'
+                probab = itens[j][2]+vlr
+                if probab > 100:
+                    probab = 100
+                aux = aux + str(i+1)+ ',' + items_pedido[i].replace(',','.') + ','+ str(pedido['quantidade'][i]) +' , ' + itens[j][0].replace(',','.') + ', '+ str(orcamento['quantidade'][itens[j][3]]) +' , ' + str(probab) + ' %\n'
                 break
             elif j == len(itens)-1:
-                aux = aux + str(i+1) +' ,' + items_pedido[i]+', , , , \n'
+                aux = aux + str(i+1) +' ,' + items_pedido[i].replace(',','.')+', '+ str(pedido['quantidade'][i]) +' , , , \n'
     return aux
 
 def splitString_to_list(varStr):
